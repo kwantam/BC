@@ -1,0 +1,7 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=BC
+Exec=/usr/local/bin/bc
+Icon=/usr/share/icons/bc.png
+MimeType=application/x-executable;
