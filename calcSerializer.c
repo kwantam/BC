@@ -20,19 +20,34 @@ void strrepl (char *str, char from, char to)
 }
 
 // turn a savedCalc structure into a string to be saved to a file
+// return number of bytes in serialized string, not including '\0'
 int serializeCalc (savedCalc *calc, char *scalc)
 {
+        int i, size, bufstart=0;
+
+        // we use ':' as a field separator, so replace it with a
+        // non-typable character so that we can restore ':' contained
+        // in the name when we retrieve the structure
         strrepl(calc->name,':','\1');
         
-        return snprintf(scalc,_RSW_MAX_SERLENGTH,"%s:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e:%e\n",
-                        calc->name, calc->coefficients[0], calc->coefficients[1],
-                        (calc->coefficients)[2], (calc->coefficients)[3],
-                        (calc->coefficients)[4], (calc->coefficients)[5],
-                        (calc->coefficients)[6], (calc->coefficients)[7],
-                        (calc->coefficients)[8], (calc->coefficients)[9],
-                        (calc->coefficients)[10], (calc->coefficients)[11],
-                        (calc->coefficients)[12], (calc->coefficients)[13],
-                        (calc->coefficients)[14], (calc->coefficients)[15]);
+        // start by writing the name
+        bufstart = snprintf(scalc,_RSW_MAX_NAMELENGTH,"%s",calc->name);
+
+        // repeatedly overwrite the trailing \0 with the next string chunk
+        for (i=0;i<_RSW_NUM_COEFFICIENTS;i++) {
+                size = snprintf((char *) (scalc+bufstart*sizeof(char)),
+                                _RSW_MAX_SERLENGTH-bufstart, ":%e",
+                                (calc->coefficients)[i]);
+                bufstart += size;
+        }
+
+        // add in the final '\n\0'
+        size = snprintf((char *) (scalc+bufstart*sizeof(char)),
+                        _RSW_MAX_SERLENGTH-bufstart, "\n");
+        scalc[_RSW_MAX_SERLENGTH-1] = '\0';
+        bufstart += size;
+
+        return bufstart;
 }
 
 // serialize the calc data into a string to be written to a file
@@ -40,7 +55,7 @@ int serializeCalc (savedCalc *calc, char *scalc)
 // returns size of string
 int serializeFile (savedCalc **calc, char **contents)
 {
-        char sBuf[_RSW_MAX_SERLENGTH+1];
+        char sBuf[_RSW_MAX_SERLENGTH];
         int i, size, bufstart = 0;
         char *sFile = NULL;
 
@@ -50,7 +65,7 @@ int serializeFile (savedCalc **calc, char **contents)
                 sFile = (char *) realloc((void *) sFile, (bufstart+size+1)*sizeof(char));
 
                 // overwrite the previously written null terminator with the new string start
-                strncpy((char *) (sFile+bufstart), sBuf, size+1);
+                strncpy((char *) (sFile+bufstart*sizeof(char)), sBuf, size+1);
 
                 // increase bufstart by size; do not include size of null terminator (per above)
                 bufstart += size;
@@ -73,13 +88,19 @@ savedCalc *deserializeCalc (char *scalc)
         char *scalcTok;
         char *tokptr = NULL;
         
+        // read in the name
+        // be sure that we have a '\0' trailing
+        // revert '\1' to ':'
         scalcTok = strtok_r(scalc,":",&tokptr);
         strncpy(calc->name,scalcTok,_RSW_MAX_NAMELENGTH);
         (calc->name)[_RSW_MAX_NAMELENGTH-1] = '\0';
         strrepl(calc->name,'\1',':');
 
-        for (i=0;i<13;i++) {
-                if ((scalcTok = strtok_r(NULL,":",&tokptr)) == NULL) { (calc->coefficients)[i] = 0; }
+        // read in each coefficient, convert it to double
+        for (i=0;i<_RSW_NUM_COEFFICIENTS;i++) {
+                if ((scalcTok = strtok_r(NULL,":",&tokptr)) == NULL) {
+                        (calc->coefficients)[i] = 0;
+                }
                 else { (calc->coefficients)[i] = strtod(scalcTok,NULL); }
         }
 
@@ -122,12 +143,16 @@ savedCalc *newCalc (char *name, double *coefficients)
 {
         int i;
 
+        // copy in the name
+        // make sure it doesn't overrun the allocated space in the struct
         savedCalc *nC = (savedCalc *) malloc(sizeof(savedCalc));
         strncpy(nC->name,name,_RSW_MAX_NAMELENGTH);
         nC->name[_RSW_MAX_NAMELENGTH-1] = '\0';
 
+        // copy the coefficients
         for (i=0;i<_RSW_NUM_COEFFICIENTS;i++) { (nC->coefficients)[i] = coefficients[i]; }
 
+        // return pointer to the new structure
         return nC;
 }
 
@@ -137,8 +162,12 @@ savedCalc *calccpy (savedCalc *dest, const savedCalc *src)
 {
         int i;
 
+        // copy in the name
+        // make sure it doesn't overrun the allocated space in the struct
         strncpy(dest->name, src->name, _RSW_MAX_NAMELENGTH);
         dest->name[_RSW_MAX_NAMELENGTH-1] = '\0';
+
+        // copy the coefficients
         for (i=0;i<_RSW_NUM_COEFFICIENTS;i++) {
                 (dest->coefficients)[i] = (src->coefficients)[i];
         }
@@ -369,7 +398,6 @@ int main (void)
         free(serd);
 
         freeCalc(bar);
-        free(quux);
         free(sc1);
         free(sc2);
         free(sc3);
