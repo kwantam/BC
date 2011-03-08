@@ -2,8 +2,7 @@
 #include "ballistics.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-#define MILperMOA 0.290888209
+#include <string.h>
 
 enum {
         COL_RANGE = 0,
@@ -15,6 +14,7 @@ enum {
         NUM_COLS
 };
 
+#include "calcSerializer.c"
 
 // change column names from MOA to Mils if the second argument is true
 // this lets us create the treeview structures once and just update
