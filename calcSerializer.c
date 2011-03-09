@@ -238,6 +238,9 @@ int delCalc (int n, savedCalc ***calcs)
         int i;
         int done = 0;
 
+	// don't try to free somewhere outside the legal bounds
+	if (n < 0) { return -1; }
+
         // start at the beginning of the list, and double
         // check that the element we want to remove is indeed
         // in the list

@@ -1,5 +1,6 @@
 #include <hildon/hildon.h>
 #include "ballistics.h"
+#include <gio/gio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@ enum {
         NUM_COLS
 };
 
+#define _BC_SAVE_FILE "/.bcrc"
 #include "calcSerializer.c"
 
 // change column names from MOA to Mils if the second argument is true
@@ -99,21 +101,40 @@ void pack2Horizontal (GtkWidget **field1, char *name1, GtkWidget **field2, char 
         return;
 }
 
+// populate a selector button from a calc array
+void populateSelector (HildonTouchSelector *selector, savedCalc **calcs)
+{
+        int i;
+
+        for (i=0;calcs[i]!=NULL;i++) {
+                hildon_touch_selector_append_text( selector, (calcs[i])->name );
+        }
+
+        return;
+}
+
 void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameField,
                 GtkWidget **bcField, GtkWidget **vField, GtkWidget **shField,
                 GtkWidget **angField, GtkWidget **zeroField, GtkWidget **wsField,
                 GtkWidget **waField, GtkWidget **altField, GtkWidget **pressField,
                 GtkWidget **temprField, GtkWidget **humField, GtkWidget **atmButton,
                 GtkWidget **milButton, GtkWidget **dragSelButton, GtkWidget **rngField,
-                GtkWidget **incField)
+                GtkWidget **incField, GtkWidget **calcSelButton, savedCalc ***calcs,
+                GtkWidget **saveButton, GtkWidget **delButton, GtkWidget **loadButton)
 {
         GtkWidget *tempVbox;
         GtkWidget *tempHbox;
         GtkWidget *mainArea;
         GtkWidget *dragSelector;
         GtkWidget *milSelector;
+        GtkWidget *calcSelector;
+        char *saveFileName = strndup((const char *)g_get_home_dir(),(size_t) 32);
+        strcat(saveFileName,_BC_SAVE_FILE);
+        GFile *saveFile = g_file_new_for_path(saveFileName);
+        free(saveFileName);
+        char *saveContents = NULL;
 
-                *window = hildon_stackable_window_new();
+        *window = hildon_stackable_window_new();
         gtk_window_set_title ( (GtkWindow *) *window, "BC" );
 
         *button = hildon_button_new_with_text 
@@ -124,7 +145,40 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         tempVbox = gtk_vbox_new(TRUE, 0);
         // button goes on last line of vbox
         gtk_box_pack_end((GtkBox *) tempVbox, *button, TRUE, TRUE, 0);
-        
+
+        // read in the file
+        if (g_file_load_contents(saveFile, NULL, &saveContents, NULL, NULL, NULL)) {
+                deserializeFile(saveContents, calcs);
+                free(saveContents);
+        } else {
+                deserializeFile(NULL, calcs);
+        }
+
+        // no more need for the GFile *
+        g_object_unref(saveFile);
+
+        // create the selector for saved calcs
+        calcSelector = hildon_touch_selector_new_text();
+        // populate it with the deserialized entries
+        populateSelector( (HildonTouchSelector *) calcSelector, *calcs );
+        hildon_touch_selector_set_column_selection_mode( (HildonTouchSelector *) calcSelector, HILDON_TOUCH_SELECTOR_SELECTION_MODE_SINGLE );
+        // button for calc selector
+        *calcSelButton = hildon_picker_button_new(HILDON_SIZE_FULLSCREEN_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+        hildon_picker_button_set_selector( (HildonPickerButton *) *calcSelButton, (HildonTouchSelector *) calcSelector );
+        // don't pick a default; let it stay blank until the user picks one
+        gtk_box_pack_start((GtkBox *) tempVbox, *calcSelButton, TRUE, TRUE, 0);
+
+        // make the save, load, delete buttons
+        *loadButton = hildon_button_new_with_text( HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Load", NULL );
+        *saveButton = hildon_button_new_with_text( HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Save", NULL );
+        *delButton = hildon_button_new_with_text( HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Delete", NULL );
+        // pack them horizontally
+        tempHbox = gtk_hbox_new(TRUE, 0);
+        gtk_box_pack_start((GtkBox *) tempHbox, *loadButton, TRUE, TRUE, 0);
+        gtk_box_pack_start((GtkBox *) tempHbox, *saveButton, TRUE, TRUE, 0);
+        gtk_box_pack_start((GtkBox *) tempHbox, *delButton, TRUE, TRUE, 0);
+        gtk_box_pack_start((GtkBox *) tempVbox, tempHbox, TRUE, TRUE, 0);
+
         // line 1: name, zero range
         pack2Horizontal(nameField, "Name", zeroField, "Zero Range (yards)", &tempVbox);
         // line 2: BC, velocity
@@ -137,14 +191,14 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         pack2Horizontal(rngField, "Max Range (yards)", incField, "Range Increment (yards)", &tempVbox);
         // line 6: option buttons
         tempHbox = gtk_hbox_new(TRUE,0);
-        
+
         // mil/MOA selector
         milSelector = hildon_touch_selector_new_text();
         hildon_touch_selector_append_text( (HildonTouchSelector *) milSelector, "MOA" );
         hildon_touch_selector_append_text( (HildonTouchSelector *) milSelector, "Mils" );
         hildon_touch_selector_set_column_selection_mode( (HildonTouchSelector *) milSelector, HILDON_TOUCH_SELECTOR_SELECTION_MODE_SINGLE );
         // button for mil/MOA selector
-        *milButton = hildon_picker_button_new(HILDON_SIZE_AUTO, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+        *milButton = hildon_picker_button_new(HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
         hildon_picker_button_set_selector( (HildonPickerButton *) *milButton, (HildonTouchSelector *) milSelector );
         hildon_picker_button_set_active( (HildonPickerButton *) *milButton, 0 );
 
@@ -158,7 +212,7 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         hildon_touch_selector_append_text( (HildonTouchSelector *) dragSelector, "G8");
         hildon_touch_selector_set_column_selection_mode( (HildonTouchSelector *) dragSelector, HILDON_TOUCH_SELECTOR_SELECTION_MODE_SINGLE );
         // button for drag model selector
-        *dragSelButton = hildon_picker_button_new(HILDON_SIZE_AUTO, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+        *dragSelButton = hildon_picker_button_new(HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
         hildon_picker_button_set_selector( (HildonPickerButton *) *dragSelButton, (HildonTouchSelector *) dragSelector );
         hildon_picker_button_set_active( (HildonPickerButton *) *dragSelButton, 0 );
 
@@ -227,12 +281,33 @@ void makeChildWindow (GtkWidget **childWindow, GtkWidget **ballDataView, GtkWidg
         return;
 }
 
+void writeCalcs (savedCalc **calcs)
+{
+        char *serializedCalcs;
+        int serLength;
+        char *saveFileName = strndup((const char *)g_get_home_dir(),(size_t) 32);
+        strcat(saveFileName,_BC_SAVE_FILE);
+        GFile *saveFile = g_file_new_for_path(saveFileName);
+        free(saveFileName);
+
+        // serialize the calcs
+        serLength = serializeFile(calcs, &serializedCalcs);
+
+        // write out the file
+        g_file_replace_contents(saveFile, serializedCalcs, serLength, NULL, FALSE, G_FILE_CREATE_REPLACE_DESTINATION, NULL, NULL, NULL);
+
+        // free allocated memory
+        g_object_unref(saveFile);
+        free(serializedCalcs);
+        return;
+}
 
 int main (int argc, char **argv)
 {
         // GUI stuff
         HildonProgram *program;
-        GtkWidget *window, *button, *nameField, *bcField, *vField, *shField, *angField, *zeroField, *wsField, *waField, *altField, *pressField, *temprField, *humField, *atmButton, *milButton, *dragSelButton, *rngField, *incField;
+        GtkWidget *window, *button, *nameField, *bcField, *vField, *shField, *angField, *zeroField, *wsField, *waField, *altField, *pressField, *temprField, *humField, *atmButton, *milButton, *dragSelButton, *rngField, *incField, *calcSelButton, *saveButton, *delButton, *loadButton;
+        savedCalc **calcs;
         GtkWidget *childWindow, *ballDataView, *ballHeaderView;
         GtkWidget *boundsErrorNote;
         GtkTreeModel *ballDataModel;
@@ -256,7 +331,9 @@ int main (int argc, char **argv)
         double range;
         double increment;
         int dragFunction;
+        int dragFunctionSel;
         int useMils;
+        int useAtmospheric;
 
         // program initialization
         g_set_application_name ("BC");
@@ -264,17 +341,15 @@ int main (int argc, char **argv)
         program = hildon_program_get_instance ();
 
         // create main window
-        makeMainWindow( &window, &button, &nameField, &bcField, &vField, &shField, &angField, &zeroField, &wsField, &waField, &altField, &pressField, &temprField, &humField, &atmButton, &milButton, &dragSelButton, &rngField, &incField );
+        makeMainWindow( &window, &button, &nameField, &bcField, &vField, &shField, &angField, &zeroField, &wsField, &waField, &altField, &pressField, &temprField, &humField, &atmButton, &milButton, &dragSelButton, &rngField, &incField, &calcSelButton, &calcs, &saveButton, &delButton, &loadButton);
         hildon_program_add_window (program, HILDON_WINDOW (window));
-        g_signal_connect (G_OBJECT (window), "delete_event", (GCallback) gtk_main_quit, NULL);
 
         // create child window
         makeChildWindow (&childWindow, &ballDataView, &ballHeaderView);
         // closure!
         g_signal_connect ( (GObject *) childWindow, "delete_event", (GCallback) gtk_widget_hide, (gpointer) childWindow );
 
-
-        void reportNum (GtkWidget *widget, gpointer data) {
+        void readValues (void) {
                 // read out data from the appropriate widgets
                 bc = strtod( (char *) hildon_entry_get_text( (HildonEntry *) bcField ), NULL );
                 v = strtod( (char *) hildon_entry_get_text( (HildonEntry *) vField ), NULL );
@@ -289,6 +364,90 @@ int main (int argc, char **argv)
                 humidity = strtod( (char *) hildon_entry_get_text( (HildonEntry *) humField ), NULL );
                 range = strtod( (char *) hildon_entry_get_text( (HildonEntry *) rngField ), NULL );
                 increment = strtod( (char *) hildon_entry_get_text( (HildonEntry *) incField ), NULL );
+                useAtmospheric = gtk_toggle_button_get_active( (GtkToggleButton *) atmButton );
+                dragFunctionSel = hildon_picker_button_get_active( (HildonPickerButton *) dragSelButton );
+                useMils = hildon_picker_button_get_active( (HildonPickerButton *) milButton );
+        }
+
+        void updateCalcs (savedCalc **calcs) {
+                // get the selector
+                HildonTouchSelector *calcSelector = hildon_picker_button_get_selector( (HildonPickerButton *) calcSelButton );
+
+                // clear it
+                gtk_list_store_clear((GtkListStore *)hildon_touch_selector_get_model(calcSelector,0));
+
+                // populate the new selector and update the picker button
+                populateSelector( calcSelector, calcs );
+                hildon_picker_button_set_active((HildonPickerButton *) calcSelButton, -1);
+        }
+
+        void saveCalcButton (GtkWidget *widget, savedCalc ***theCalcs) {
+                savedCalc *calc;
+
+                // read out values
+                readValues();
+
+                // make a new calc
+                calc = newCalc ((char *) hildon_entry_get_text( (HildonEntry *) nameField ),
+                                (double[]){bc,v,sh,angle,zero,windspeed,windangle,altitude,pressure,
+                                temperature,humidity,range,increment,(double) useAtmospheric,
+                                (double) dragFunctionSel, (double) useMils});
+
+                // insert it into the calcs list
+                insertCalc( calc, theCalcs );
+                // update the picker button
+                updateCalcs(*theCalcs);
+                writeCalcs(*theCalcs);
+        }
+
+        // connect the above function to the saveButton press
+        g_signal_connect (G_OBJECT (saveButton), "clicked", (GCallback) saveCalcButton, (gpointer) &calcs);
+
+        void delCalcButton (GtkWidget *widget, savedCalc ***theCalcs) {
+                // delete selected calc
+                if ((delCalc ( hildon_picker_button_get_active( (HildonPickerButton *) calcSelButton ), theCalcs ))>=0)
+                {       // update picker button
+                        updateCalcs(*theCalcs);
+                        writeCalcs(*theCalcs);
+                }
+        }
+
+        // connect the above function to the delButton press
+        g_signal_connect( G_OBJECT (delButton), "clicked", (GCallback) delCalcButton, (gpointer) &calcs);
+
+        void loadCalcButton (GtkWidget *widget, savedCalc ***theCalcs) {
+                int i, selectedCalc = hildon_picker_button_get_active( (HildonPickerButton *) calcSelButton );
+                GtkWidget *fields[] = { bcField, vField, shField, angField, zeroField, wsField, waField, altField, pressField, temprField, humField, rngField, incField };
+                char prnBuffer[32];
+
+                // make sure there's actually something selected
+                // since the picker list is populated from the calcs
+                // array, any valid picker entry is known to be in the list
+                // so we don't have to bounds check on the other side
+                if (selectedCalc < 0) { return; }
+
+                hildon_entry_set_text( (HildonEntry *) nameField,(*theCalcs)[selectedCalc]->name );
+                for (i=0;i<13;i++) {
+                        snprintf(prnBuffer, 32, "%e", ((*theCalcs)[selectedCalc]->coefficients)[i]);
+                        prnBuffer[31]='\0';
+                        hildon_entry_set_text( (HildonEntry *) fields[i], prnBuffer );
+                }
+
+
+                gtk_toggle_button_set_active( (GtkToggleButton *) atmButton, (gboolean) ((*theCalcs)[selectedCalc]->coefficients)[13] );
+
+                hildon_picker_button_set_active( (HildonPickerButton *) dragSelButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[14] );
+
+                hildon_picker_button_set_active( (HildonPickerButton *) milButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[15] );
+
+                hildon_picker_button_set_active( (HildonPickerButton *) calcSelButton, -1);
+        }
+
+        g_signal_connect ( G_OBJECT (loadButton), "clicked", (GCallback) loadCalcButton, (gpointer) &calcs );
+
+        void reportNum (GtkWidget *widget, gpointer data) {
+                // read out data from the appropriate widgets
+                readValues();
 
                 // bounds checking
                 if (!bc || !zero || !v || !range || !increment) {
@@ -300,7 +459,7 @@ int main (int argc, char **argv)
                 }
 
                 // if necessary, do atmospheric correction
-                if (gtk_toggle_button_get_active( (GtkToggleButton *) atmButton )) {
+                if (useAtmospheric) {
                         if (!pressure) {
                                 // nonzero pressure is kind of necessary
                                 boundsErrorNote = hildon_note_new_information( (GtkWindow *) window, "Error: Pressure must be nonzero." );
@@ -313,7 +472,7 @@ int main (int argc, char **argv)
                 }
 
                 // convert from picker button notation to the drag function enum
-                switch (hildon_picker_button_get_active( (HildonPickerButton *) dragSelButton )) {
+                switch (dragFunctionSel) {
                         case 0:
                                 dragFunction = G1;
                                 break;
@@ -346,8 +505,6 @@ int main (int argc, char **argv)
                         (NUM_COLS, G_TYPE_INT, G_TYPE_FLOAT, G_TYPE_FLOAT,
                          G_TYPE_FLOAT, G_TYPE_FLOAT, G_TYPE_INT);
 
-                useMils = hildon_picker_button_get_active( (HildonPickerButton *) milButton );
-
                 for (s=0;(s<=k) && (s<=range);s+=increment) {
                         gtk_list_store_append ( (GtkListStore *) ballDataModel, &ballDataIter);
                         gtk_list_store_set ( (GtkListStore *) ballDataModel, &ballDataIter,
@@ -355,7 +512,7 @@ int main (int argc, char **argv)
                                         COL_DROP, GetPath(sln,s),
                                         COL_DROP_M, useMils ? 1000*MOAtoRad(GetMOA(sln,s)) : GetMOA(sln,s),
                                         COL_DRIFT, GetWindage(sln,s),
-                                        COL_DRIFT_M, useMils ? 1000*MOAtoRad(GetMOA(sln,s)) : GetWindageMOA(sln,s),
+                                        COL_DRIFT_M, useMils ? 1000*MOAtoRad(GetWindageMOA(sln,s)) : GetWindageMOA(sln,s),
                                         COL_VELOCITY, (int) GetVelocity(sln,s), -1);
                 }
                 // now that we've put the solution into the ballDataModel,
@@ -372,6 +529,9 @@ int main (int argc, char **argv)
 
         // connect the above function to the button press
         g_signal_connect (G_OBJECT (button), "clicked", (GCallback) reportNum, NULL);
+
+        // connect quit to gtk_main_quit
+        g_signal_connect (G_OBJECT (window), "delete_event", (GCallback) gtk_main_quit, NULL);
 
         // show main window
         gtk_widget_show_all (GTK_WIDGET (window));
