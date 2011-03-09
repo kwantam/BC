@@ -16,6 +16,7 @@ enum {
 };
 
 #define _BC_SAVE_FILE "/home/user/.bcrc"
+#define _BC_VERSION "0.1"
 #include "calcSerializer.c"
 
 // change column names from MOA to Mils if the second argument is true
@@ -113,6 +114,15 @@ void populateSelector (HildonTouchSelector *selector, savedCalc **calcs)
         return;
 }
 
+// about dialog
+void aboutDialog (GtkWidget *widget, GtkWidget *window)
+{
+        GtkWidget *aboutNote = hildon_note_new_information( (GtkWindow *) window, "BC version " _BC_VERSION " by Riad Wahby <rsw@jfet.org>.\nhttp://web.jfet.org/ballisticalc/\n\nThis program is free software; you can redistribute it and/or modify it under the terms of the GNU GPLv2 or later." );
+
+        gtk_dialog_run( (GtkDialog *) aboutNote );
+        gtk_object_destroy( (GtkObject *) aboutNote );
+}
+
 void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameField,
                 GtkWidget **bcField, GtkWidget **vField, GtkWidget **shField,
                 GtkWidget **angField, GtkWidget **zeroField, GtkWidget **wsField,
@@ -128,6 +138,8 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         GtkWidget *dragSelector;
         GtkWidget *milSelector;
         GtkWidget *calcSelector;
+	GtkWidget *aboutButton;
+        GtkWidget *menu;
         GFile *saveFile = g_file_new_for_path(_BC_SAVE_FILE);
         char *saveContents = NULL;
 
@@ -228,12 +240,16 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
                         TRUE, 10, 500, 0.93, 20 );
         hildon_pannable_area_add_with_viewport( (HildonPannableArea *) mainArea, tempVbox );
 
-        // use a vbox as the top level structure to force the proper width
-        tempVbox = gtk_vbox_new(TRUE,0);
-        gtk_box_pack_start((GtkBox *) tempVbox, mainArea, TRUE, TRUE, 0);
-
+        // create the menu with the About button
+        menu = hildon_app_menu_new();
+        aboutButton = gtk_button_new_with_label("About");
+        g_signal_connect_after ( (GObject *) aboutButton, "clicked", (GCallback) aboutDialog, (gpointer) *window );
+        hildon_app_menu_append ((HildonAppMenu *) menu, (GtkButton *) aboutButton);
+	gtk_widget_show_all( (GtkWidget *) menu );
+        hildon_window_set_app_menu ((HildonWindow *) *window, (HildonAppMenu *) menu);
+        
         // assemble the window
-        gtk_container_add( (GtkContainer *) *window, tempVbox );
+        gtk_container_add( (GtkContainer *) *window, mainArea );
 
         return;
 }
@@ -496,7 +512,7 @@ int main (int argc, char **argv)
                         (NUM_COLS, G_TYPE_INT, G_TYPE_FLOAT, G_TYPE_FLOAT,
                          G_TYPE_FLOAT, G_TYPE_FLOAT, G_TYPE_INT);
 
-                for (s=0;(s<=k) && (s<=range);s+=increment) {
+                for (s=increment;(s<k) && (s<=range);s+=increment) {
                         gtk_list_store_append ( (GtkListStore *) ballDataModel, &ballDataIter);
                         gtk_list_store_set ( (GtkListStore *) ballDataModel, &ballDataIter,
                                         COL_RANGE, (int) GetRange(sln,s),
