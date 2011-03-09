@@ -15,7 +15,7 @@ enum {
         NUM_COLS
 };
 
-#define _BC_SAVE_FILE "/.bcrc"
+#define _BC_SAVE_FILE "/home/user/.bcrc"
 #include "calcSerializer.c"
 
 // change column names from MOA to Mils if the second argument is true
@@ -128,24 +128,13 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         GtkWidget *dragSelector;
         GtkWidget *milSelector;
         GtkWidget *calcSelector;
-        char *saveFileName = strndup((const char *)g_get_home_dir(),(size_t) 32);
-        strcat(saveFileName,_BC_SAVE_FILE);
-        GFile *saveFile = g_file_new_for_path(saveFileName);
-        free(saveFileName);
+        GFile *saveFile = g_file_new_for_path(_BC_SAVE_FILE);
         char *saveContents = NULL;
 
         *window = hildon_stackable_window_new();
         gtk_window_set_title ( (GtkWindow *) *window, "BC" );
 
-        *button = hildon_button_new_with_text 
-                (HILDON_SIZE_HALFSCREEN_WIDTH | HILDON_SIZE_FINGER_HEIGHT,
-                 HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, 
-                 "Compute", NULL);
-
         tempVbox = gtk_vbox_new(TRUE, 0);
-        // button goes on last line of vbox
-        gtk_box_pack_end((GtkBox *) tempVbox, *button, TRUE, TRUE, 0);
-
         // read in the file
         if (g_file_load_contents(saveFile, NULL, &saveContents, NULL, NULL, NULL)) {
                 deserializeFile(saveContents, calcs);
@@ -157,17 +146,6 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         // no more need for the GFile *
         g_object_unref(saveFile);
 
-        // create the selector for saved calcs
-        calcSelector = hildon_touch_selector_new_text();
-        // populate it with the deserialized entries
-        populateSelector( (HildonTouchSelector *) calcSelector, *calcs );
-        hildon_touch_selector_set_column_selection_mode( (HildonTouchSelector *) calcSelector, HILDON_TOUCH_SELECTOR_SELECTION_MODE_SINGLE );
-        // button for calc selector
-        *calcSelButton = hildon_picker_button_new(HILDON_SIZE_FULLSCREEN_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
-        hildon_picker_button_set_selector( (HildonPickerButton *) *calcSelButton, (HildonTouchSelector *) calcSelector );
-        // don't pick a default; let it stay blank until the user picks one
-        gtk_box_pack_start((GtkBox *) tempVbox, *calcSelButton, TRUE, TRUE, 0);
-
         // make the save, load, delete buttons
         *loadButton = hildon_button_new_with_text( HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Load", NULL );
         *saveButton = hildon_button_new_with_text( HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Save", NULL );
@@ -177,7 +155,23 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
         gtk_box_pack_start((GtkBox *) tempHbox, *loadButton, TRUE, TRUE, 0);
         gtk_box_pack_start((GtkBox *) tempHbox, *saveButton, TRUE, TRUE, 0);
         gtk_box_pack_start((GtkBox *) tempHbox, *delButton, TRUE, TRUE, 0);
-        gtk_box_pack_start((GtkBox *) tempVbox, tempHbox, TRUE, TRUE, 0);
+        gtk_box_pack_end((GtkBox *) tempVbox, tempHbox, TRUE, TRUE, 0);
+
+        // create the selector for saved calcs
+        calcSelector = hildon_touch_selector_new_text();
+        // populate it with the deserialized entries
+        populateSelector( (HildonTouchSelector *) calcSelector, *calcs );
+        hildon_touch_selector_set_column_selection_mode( (HildonTouchSelector *) calcSelector, HILDON_TOUCH_SELECTOR_SELECTION_MODE_SINGLE );
+        // button for calc selector
+        *calcSelButton = hildon_picker_button_new(HILDON_SIZE_FULLSCREEN_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+        hildon_picker_button_set_selector( (HildonPickerButton *) *calcSelButton, (HildonTouchSelector *) calcSelector );
+        // don't pick a default; let it stay blank until the user picks one
+        gtk_box_pack_end((GtkBox *) tempVbox, *calcSelButton, TRUE, TRUE, 0);
+
+        // compute button
+        *button = hildon_button_new_with_text( HILDON_SIZE_FULLSCREEN_WIDTH | HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL, "Compute", NULL);
+
+        gtk_box_pack_end((GtkBox *) tempVbox, *button, TRUE, TRUE, 0);
 
         // line 1: name, zero range
         pack2Horizontal(nameField, "Name", zeroField, "Zero Range (yards)", &tempVbox);
@@ -285,10 +279,7 @@ void writeCalcs (savedCalc **calcs)
 {
         char *serializedCalcs;
         int serLength;
-        char *saveFileName = strndup((const char *)g_get_home_dir(),(size_t) 32);
-        strcat(saveFileName,_BC_SAVE_FILE);
-        GFile *saveFile = g_file_new_for_path(saveFileName);
-        free(saveFileName);
+        GFile *saveFile = g_file_new_for_path(_BC_SAVE_FILE);
 
         // serialize the calcs
         serLength = serializeFile(calcs, &serializedCalcs);
