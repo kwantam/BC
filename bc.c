@@ -435,7 +435,7 @@ int main (int argc, char **argv)
 
                 hildon_entry_set_text( (HildonEntry *) nameField,(*theCalcs)[selectedCalc]->name );
                 for (i=0;i<13;i++) {
-                        snprintf(prnBuffer, 32, "%e", ((*theCalcs)[selectedCalc]->coefficients)[i]);
+                        snprintf(prnBuffer, 32, "%g", ((*theCalcs)[selectedCalc]->coefficients)[i]);
                         prnBuffer[31]='\0';
                         hildon_entry_set_text( (HildonEntry *) fields[i], prnBuffer );
                 }
