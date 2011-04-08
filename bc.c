@@ -125,7 +125,7 @@ void aboutDialog (GtkWidget *widget, GtkWidget *window)
 
 void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameField,
                 GtkWidget **bcField, GtkWidget **vField, GtkWidget **shField,
-                GtkWidget **angField, GtkWidget **zeroField, GtkWidget **wsField,
+                GtkWidget **angField, GtkWidget **zeroField, GtkWidget **yintField, GtkWidget **wsField,
                 GtkWidget **waField, GtkWidget **altField, GtkWidget **pressField,
                 GtkWidget **temprField, GtkWidget **humField, GtkWidget **atmButton,
                 GtkWidget **milButton, GtkWidget **dragSelButton, GtkWidget **rngField,
@@ -185,17 +185,19 @@ void makeMainWindow (GtkWidget **window, GtkWidget **button, GtkWidget **nameFie
 
         gtk_box_pack_end((GtkBox *) tempVbox, *button, TRUE, TRUE, 0);
 
-        // line 1: name, zero range
+        // line 1-2: name, zero range
         pack2Horizontal(nameField, "Name", zeroField, "Zero Range (yards)", &tempVbox);
-        // line 2: BC, velocity
+        // line 3-4: BC, velocity
         pack2Horizontal(bcField, "BC", vField, "Velocity (fps)", &tempVbox);
-        // line 3: sh, angle
+        // line 5-6: sh, angle
         pack2Horizontal(shField, "Sight Height (inches)", angField, "Sight Angle (degrees)", &tempVbox);
-        // line 4: wind speed, wind angle
+        // line 7: y intercept
+        pack2Horizontal(yintField, "POI at Zero Range (inches)", (GtkWidget **) NULL, (char *) NULL, &tempVbox);
+        // line 8-9: wind speed, wind angle
         pack2Horizontal(wsField, "Wind Speed (MPH)", waField, "Wind Angle (degrees)", &tempVbox);
-        // line 5: max range and increment
+        // line 10-11: max range and increment
         pack2Horizontal(rngField, "Max Range (yards)", incField, "Range Increment (yards)", &tempVbox);
-        // line 6: option buttons
+        // line 12 onwards: option buttons
         tempHbox = gtk_hbox_new(TRUE,0);
 
         // mil/MOA selector
@@ -313,7 +315,7 @@ int main (int argc, char **argv)
 {
         // GUI stuff
         HildonProgram *program;
-        GtkWidget *window, *button, *nameField, *bcField, *vField, *shField, *angField, *zeroField, *wsField, *waField, *altField, *pressField, *temprField, *humField, *atmButton, *milButton, *dragSelButton, *rngField, *incField, *calcSelButton, *saveButton, *delButton, *loadButton;
+        GtkWidget *window, *button, *nameField, *bcField, *vField, *shField, *angField, *zeroField, *yintField, *wsField, *waField, *altField, *pressField, *temprField, *humField, *atmButton, *milButton, *dragSelButton, *rngField, *incField, *calcSelButton, *saveButton, *delButton, *loadButton;
         savedCalc **calcs;
         GtkWidget *childWindow, *ballDataView, *ballHeaderView;
         GtkWidget *boundsErrorNote;
@@ -328,6 +330,7 @@ int main (int argc, char **argv)
         double sh=1.6;
         double angle=0;
         double zero=100;
+        double yInt=0;
         double windspeed=0;
         double windangle=0;
         double zeroangle=0;
@@ -348,7 +351,7 @@ int main (int argc, char **argv)
         program = hildon_program_get_instance ();
 
         // create main window
-        makeMainWindow( &window, &button, &nameField, &bcField, &vField, &shField, &angField, &zeroField, &wsField, &waField, &altField, &pressField, &temprField, &humField, &atmButton, &milButton, &dragSelButton, &rngField, &incField, &calcSelButton, &calcs, &saveButton, &delButton, &loadButton);
+        makeMainWindow( &window, &button, &nameField, &bcField, &vField, &shField, &angField, &zeroField, &yintField, &wsField, &waField, &altField, &pressField, &temprField, &humField, &atmButton, &milButton, &dragSelButton, &rngField, &incField, &calcSelButton, &calcs, &saveButton, &delButton, &loadButton);
         hildon_program_add_window (program, HILDON_WINDOW (window));
 
         // create child window
@@ -363,6 +366,7 @@ int main (int argc, char **argv)
                 sh = strtod( (char *) hildon_entry_get_text( (HildonEntry *) shField ), NULL );
                 angle = strtod( (char *) hildon_entry_get_text( (HildonEntry *) angField ), NULL );
                 zero = strtod( (char *) hildon_entry_get_text( (HildonEntry *) zeroField ), NULL );
+                yInt = strtod( (char *) hildon_entry_get_text( (HildonEntry *) yintField ), NULL );
                 windspeed = strtod( (char *) hildon_entry_get_text( (HildonEntry *) wsField ), NULL );
                 windangle = strtod( (char *) hildon_entry_get_text( (HildonEntry *) waField ), NULL );
                 altitude = strtod( (char *) hildon_entry_get_text( (HildonEntry *) altField ), NULL );
@@ -397,7 +401,7 @@ int main (int argc, char **argv)
                 // make a new calc
                 calc = newCalc ((char *) hildon_entry_get_text( (HildonEntry *) nameField ),
                                 (double[]){bc,v,sh,angle,zero,windspeed,windangle,altitude,pressure,
-                                temperature,humidity,range,increment,(double) useAtmospheric,
+                                temperature,humidity,range,increment,yInt,(double) useAtmospheric,
                                 (double) dragFunctionSel, (double) useMils});
 
                 // insert it into the calcs list
@@ -424,7 +428,7 @@ int main (int argc, char **argv)
 
         void loadCalcButton (GtkWidget *widget, savedCalc ***theCalcs) {
                 int i, selectedCalc = hildon_picker_button_get_active( (HildonPickerButton *) calcSelButton );
-                GtkWidget *fields[] = { bcField, vField, shField, angField, zeroField, wsField, waField, altField, pressField, temprField, humField, rngField, incField };
+                GtkWidget *fields[] = { bcField, vField, shField, angField, zeroField, wsField, waField, altField, pressField, temprField, humField, rngField, incField, yintField };
                 char prnBuffer[32];
 
                 // make sure there's actually something selected
@@ -434,18 +438,18 @@ int main (int argc, char **argv)
                 if (selectedCalc < 0) { return; }
 
                 hildon_entry_set_text( (HildonEntry *) nameField,(*theCalcs)[selectedCalc]->name );
-                for (i=0;i<13;i++) {
+                for (i=0;i<(_RSW_NUM_COEFFICIENTS-_RSW_NUM_BOOLS);i++) {
                         snprintf(prnBuffer, 32, "%g", ((*theCalcs)[selectedCalc]->coefficients)[i]);
                         prnBuffer[31]='\0';
                         hildon_entry_set_text( (HildonEntry *) fields[i], prnBuffer );
                 }
 
 
-                gtk_toggle_button_set_active( (GtkToggleButton *) atmButton, (gboolean) ((*theCalcs)[selectedCalc]->coefficients)[13] );
+                gtk_toggle_button_set_active( (GtkToggleButton *) atmButton, (gboolean) ((*theCalcs)[selectedCalc]->coefficients)[(_RSW_NUM_COEFFICIENTS-_RSW_NUM_BOOLS)] );
 
-                hildon_picker_button_set_active( (HildonPickerButton *) dragSelButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[14] );
+                hildon_picker_button_set_active( (HildonPickerButton *) dragSelButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[(_RSW_NUM_COEFFICIENTS-_RSW_NUM_BOOLS)+1] );
 
-                hildon_picker_button_set_active( (HildonPickerButton *) milButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[15] );
+                hildon_picker_button_set_active( (HildonPickerButton *) milButton, (int) ((*theCalcs)[selectedCalc]->coefficients)[(_RSW_NUM_COEFFICIENTS-_RSW_NUM_BOOLS)+2] );
 
                 hildon_picker_button_set_active( (HildonPickerButton *) calcSelButton, -1);
         }
@@ -504,7 +508,7 @@ int main (int argc, char **argv)
 
                 // we could come back and add an option to set a height above true zero at specified zero range;
                 // that would change the last argument to the ZeroAngle function. See ballistics.h for details.
-                zeroangle = ZeroAngle(dragFunction,bc,v,sh,zero,0);
+                zeroangle = ZeroAngle(dragFunction,bc,v,sh,zero,yInt/12);
 
                 k = SolveAll(dragFunction,bc,v,sh,angle,zeroangle,windspeed,windangle,&sln);
 

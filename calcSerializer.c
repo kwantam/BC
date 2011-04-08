@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #endif
 
-#define _RSW_NUM_COEFFICIENTS 16
+#define _RSW_NUM_COEFFICIENTS 17
+#define _RSW_NUM_BOOLS 3
 #define _RSW_MAX_NAMELENGTH 256
 #define _RSW_MAX_SERLENGTH 512
 
