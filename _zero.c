@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 double ZeroAngle(int DragFunction, double DragCoefficient, double Vi, double SightHeight, double ZeroRange, double yIntercept){
 
 	// Numerical Integration variables

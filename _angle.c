@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 // Specialty angular conversion functions
 double DegtoMOA(double deg){
 	return deg*60;

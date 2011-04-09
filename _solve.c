@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 int SolveAll(int DragFunction, double DragCoefficient, double Vi, double SightHeight, \
 double ShootingAngle, double ZAngle, double WindSpeed, double WindAngle, double** Solution){
 

@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 double GetRange(double* sln, int yardage){
 	double size=sln[__BCOMP_MAXRANGE__*10+1];
 	if (yardage<size){

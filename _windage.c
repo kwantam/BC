@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 double Windage(double WindSpeed, double Vi, double xx, double t){
 	double Vw = WindSpeed*17.60; // Convert to inches per second.
 	return (Vw*(t-xx/Vi));

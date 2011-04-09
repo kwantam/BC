@@ -1,3 +1,8 @@
+// GNU Ballistics Library
+// Originally created by Derek Yates
+// Now available free under the GNU GPL
+
+
 double retard(int DragFunction, double DragCoefficient, double Velocity){
 
 //	printf("DF: %d, CD: %f, V: %f,);

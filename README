@@ -1,0 +1,58 @@
+BC
+Copyright (C) 2011 Riad Wahby <rsw@jfet.org> <kwantam@gmail.com>
+
+BC is a ballistic calculator for Maemo 5 (Nokia N900). It is written
+in C and uses code from the GNU Ballistics Library, originally by
+Derek Yates.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+    See http://www.gnu.org/licenses/gpl-2.0.txt for the full terms of
+    this license.
+
+BUILDING
+
+You will need the Maemo development environment up and running before you
+can build this program. For more information on this, see
+	http://maemo.org/development/
+
+Once you have this up and running, cd into the bc directory and simply type
+"make." For testing inside the dev environment on a PC, use the _X86 arch;
+for building on the phone, use the _ARMEL arch.
+
+BC requires a C compiler that supports nested functions (such as the gcc
+from the Maemo environment).
+
+INSTALLATION
+
+To install, you need to copy three files to your phone:
+
+bc -> /usr/local/bin
+bc.desktop -> /usr/share/applications/hildon
+bc.png -> /usr/share/icons
+
+USAGE NOTES
+
+A few notes on the meanings of the fields:
+
+Sight height is the distance from the sight to the bore center in inches.
+
+Sight angle is the angle of the bore relative to the plane perpendicular
+to gravity. Positive angles are shooting uphill, negative angles are down.
+Should be in the range -90 to 90.
+
+POI at zero range is the distance from the point of aim to the point of
+impact at the zero range. For example, if you have sighted your rifle
+1" high at 100 yards, enter 1 here and 100 in the zero range field.
